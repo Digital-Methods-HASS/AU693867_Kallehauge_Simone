@@ -1,0 +1,56 @@
+---
+title: "kongerækken, homework"
+author: "simone kallehauge"
+date: "2022-11-28"
+output: html_document
+---
+#indlæs libraries 
+```{r}
+library(tidyverse)
+library(here)
+```
+
+
+#indlæs data 
+```{r}
+kongeraekken <- read_csv2("../DM03/data/kongerække_homework_csv2.csv")
+```
+
+
+
+#data visualisering
+my how-to: 
+  i've first selected the name and the duration of the reign from my Excel spreadsheet,
+  but in order to to make sure that RStudio order them by reign and not first-name-letter, 
+  i make a new column in the spreedsheet, that states what order in the reign they are. 
+    here: name_count
+  
+  next i mutate my data, because R sees the "duration of reign" as a character, not as a number, 
+  which then makes my visulization wrong. So in order to make sure it order after the numeric system, 
+  i use the function: as.numeric
+  
+  i then in ggplot reorder my data by name and name_count, (see select)
+  
+  in order to make the monarchs name readable, i use the function: theme(axis.text.x = element_text(angle=90)) <-- this makes it stand verticle 
+  
+  lastly i organize the y-axis by using the "scale_y_continuous(breaks = seq), which makes me able to use lesser numbers 
+    (0 = the smallest possible number) 
+    (65 = the highest possible number) 
+    (5= the breaks: 0,5,10,15,20 etc.)
+  
+```{r}
+kongeraekken %>% 
+  select(name, Duration_Of_Reign,name_count) %>%
+  mutate(Duration_Of_Reign= as.numeric(Duration_Of_Reign)) %>% 
+  ggplot(aes(x= reorder(name, name_count), y=Duration_Of_Reign))+
+  geom_col()+
+  theme(axis.text.x = element_text(angle=90))+
+  labs(title = "kongerækken", 
+       y = "Reign Duration", 
+       x = "Monarch")+
+  scale_y_continuous(breaks = seq(0, 65, 5))
+
+```
+
+
+
