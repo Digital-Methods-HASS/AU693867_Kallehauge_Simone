@@ -1,0 +1,244 @@
+---
+title: "casualties caused by police exam"
+author: "Simone Broni Kallehauge"
+date: "2023-01-09"
+output:
+  pdf_document: default
+  html_document: default
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Read libraries needed}
+library(htmltools)
+library(tidyverse)
+library(dplyr)
+library(leaflet)
+library(plotly)
+library(ggplot2)
+```
+
+#Create the data link to data: <https://mappingpoliceviolence.org/>
+
+```{r Read in the data}
+police_killing_2022 <- read_csv("Mapping-Police-Violence-DIVIDED DATA.csv")
+```
+
+The data i use here, is the cleaned data from OpenRefine, where the date
+is seperated into day, month, year.
+
+##Create the Cluster Map of victims in 2022
+
+I've found the following code in Brent Thornes video:
+<https://www.youtube.com/watch?v=dBk8gGX1MNk> (09/12/2022)
+
+```{r Ensuring the coordinates are numeric}
+police_killing_2022$longitude <- as.numeric(police_killing_2022$longitude)
+police_killing_2022$latitude <- as.numeric(police_killing_2022$latitude)
+```
+
+Even though the coordinates in the data frame all are written
+numerically, R can sometimes misinterpret the data, and view it as a
+character. If the data we want to use to make a map is viewed as
+characters, the code won't work, and the map won't show. So in order to
+ensure that the data is infact in numeric, we can use the code written
+above.
+
+The reason for using "\$": - to the left of \$: the dataframe we want to
+use. the right of the \$: the column from the dataset It works almost
+like an intermediater: direct R to where it should get the information
+from (but not like "\<-")
+
+
+```{r making the coordinates their own value}
+long <- police_killing_2022[[43]]
+lat <- police_killing_2022[[42]]
+```
+
+The reason for making the longitude and latitude their own value, is
+that (as you will see in the code-chuck with leaflet [the map]) it makes
+the coding easier, thus i don't have to plot in the coordinates
+separately.
+
+    Description:
+      long/lat = the name of the new value 
+      <- police_killing = the place that i create my value from 
+      [[42/43]] = the column in which the new value gets it's value/data from
+
+```{r Filtering the year used for the Cluster Map}
+police_killing_2022 %>% 
+  filter(year == 2022)
+```
+
+Usually, when using the "filter" function, you have to surround the data
+in quotation marks, but because the data I want to filter is numeric,
+using quotation marks isn't necessary A way to find out if the data you
+want to use is either numeric or character, you can simply upen the data
+frame (will open a new tap) and then hover the mouse over the name of
+the column.
+
+```{r making a clustered map of the killings - without racial division}
+leaflet() %>% 
+  addTiles() %>%
+  addMarkers(lng = long, 
+             lat = lat,
+             popup = paste(police_killing_2022$race,'<br>',  
+                           police_killing_2022$name, '<br>', 
+                           police_killing_2022$age, '<br>', 
+                           police_killing_2022$gender, '<br>', 
+                           police_killing_2022$city),
+             clusterOptions = markerClusterOptions())
+```
+
+If you click on one of the clusters, it will spread out to smaller
+clusters, until you reach the singular marker, which here is a blue
+popup. On the singular popup, there is some information about the
+victim: the race, the name, the age, and the city it happend.
+Unfortunately, all the information listed above, isn't always
+available - due to unknown reasons (e.g. an unknown male from Salem)
+Another flaw with this visualization, is that it is not possible to
+separate the clusters in race, so in order to figure out how many that
+actually gets killed, there has to be another form of visualization
+
+    Tutorial used for this visulization:
+      <https://rstudio.github.io/leaflet/markers.html> (used 06/01/2023)
+
+Description of the code used [Map]: - leaflet is the package. - AddTiles
+() makes the map. - the lng and lat in "addMarkers" is respectively
+longitude and latitude. Instead of plotting in the coordinated one by
+one, I've then made a value (*as you can see in the upper grey-code,
+which is also described above the grey code*), which leads back to the
+longitude and latitude in my dataset. I've found the code clusterOptions
+here: <https://rstudio.github.io/leaflet/markers.html>
+
+It appears that for some reason, Rstudio won't load my map correctly, so it shows all the casualities from 2013-2022. But in my final report can you see the map as it should be seen
+
+```{r count the number of killings by race, 2022}
+police_killing_2022 %>% 
+  count(race, sort = TRUE)
+```
+
+The reasons for me to count how many victims there were in 2022, is that
+it is a good way to get a good overview of the numbers; in this case how
+many casualties there were in 2022, but also beacuse it is useful in
+another form of visulization:
+
+###Number of killings, divided by race - but not Population percentage
+For this visualization, I've used some of the code we worked with during
+the week 48 lesson: Webscraping (What I've used from this, is the
+filtering of race, seen in line three)
+
+```{r Visualising the killings in the different states in 2022}
+illustration_1 <- police_killing_2022 %>% 
+  select(state, year, race) %>% 
+  filter(race %in% c("Black", "White", "Hispanic", "Native American", "Unknown race")) %>% 
+  filter(year == "2022") %>% 
+  count(state, race) %>% 
+  rename(Victims ="n") %>% 
+  ggplot(aes(x=state,
+             y= Victims,
+             fill=race))+
+  geom_col()+
+   theme(axis.text = element_text(angle = 90))
+
+ggplotly(illustration_1)
+```
+
+##Killings in the US done by police divided by race, population in state
+
+```{r read in the dataset about us states population}
+library(readxl)
+us_states_code<- read_excel("NST-EST2022-POP. ALTERED DATA.xlsx")
+```
+
+undgå videnskabelig notation i % angivelse:
+
+```{r}
+options(scipen= 999)
+```
+
+```{r Counting the victims by race in each state}
+police_killing_2022 %>% 
+  select(state, year, race) %>% 
+  filter(race %in% c("Black", "White", "Hispanic", "Native American", "Unknown race")) %>% 
+  filter(year == "2022") %>% 
+  count(state, race)
+```
+
+```{r rename the column name to state}
+us_states_code <- us_states_code %>% 
+  rename(state = state_code)
+```
+
+The reason for this, is that in order for left-join (see below) to work,
+the data that need to be joined has how have the same data-name. So in
+this case, in the police_killing DF and the us_states DF the column
+containing the state abbreviations is named the same
+
+```{r calculating the percentages of victims by race in each state}
+police_killing_2022 %>% 
+  select(state, year, race) %>% 
+  filter(race %in% c("Black", "White", "Hispanic", "Native American", "Unknown race")) %>% 
+  filter(year == "2022") %>% 
+  count(state, race) %>% 
+  
+  left_join(us_states_code, by="state") %>% 
+  mutate(percentage_killed = n / pop) 
+```
+
+A disclaimer: The total number of population in each state is repeated,
+so the number of pop by each race does not mean that it is the number of
+e.g. black population in the state. However the percentage of victims
+(race) in each state - is correct.
+
+### Visualization of victims in each state, including percentage
+
+```{r}
+col_2 <- police_killing_2022 %>% 
+  select(state, year, race) %>% 
+  filter(race %in% c("Black", "White", "Hispanic", "Native American", "Unknown race")) %>% 
+  filter(year == "2022") %>% 
+  count(state, race) %>% 
+  left_join(us_states_code, by="state") %>% 
+  mutate(percentage_killed = n / pop) %>% 
+  rename(Victims ="n") %>% 
+  ggplot(aes(x=state,
+             y= percentage_killed,
+             fill=race))+
+  geom_col()+
+  theme(axis.text = element_text(angle = 90))
+
+ggplotly(col_2)
+
+```
+
+```{r counting the number of victims - by race }
+police_killing_2022 %>%  
+select(state, year, race) %>% 
+  count(race, sort=TRUE)
+```
+
+```{r calculating which state has the highest number of black victims}
+police_killing_2022 %>%  
+select(state, year, race) %>% 
+  filter(year == "2022") %>% 
+  filter(race == "Black") %>% 
+  count(state, sort=TRUE)
+```
+
+```{r calculating which state has the highest number of white victims}
+police_killing_2022 %>%  
+select(state, year, race) %>% 
+  filter(year == "2022") %>% 
+  filter(race == "White") %>% 
+  count(state, sort=TRUE)
+```
+
+```{r}
+sessionInfo()
+```
